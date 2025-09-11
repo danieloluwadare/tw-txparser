@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  txparser:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - BACKWARD_SCAN_ENABLED=true
+      - BACKWARD_SCAN_DEPTH=10000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/current"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - txparser-network
+
+networks:
+  txparser-network:
+    driver: bridge
