@@ -167,8 +167,8 @@ func TestServer_HandleTransactions(t *testing.T) {
 	// Add some test transactions
 	address := "0x1234567890abcdef"
 	transactions := []models.Transaction{
-		{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1},
-		{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2},
+		{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true},
+		{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true},
 	}
 	parser.transactions[address] = transactions
 

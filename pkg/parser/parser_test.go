@@ -159,8 +159,8 @@ func TestParser_GetTransactions(t *testing.T) {
 	}
 
 	// Add some transactions directly to storage
-	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1}
-	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2}
+	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true}
+	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true}
 
 	store.AddTransaction(address, tx1)
 	store.AddTransaction(address, tx2)
@@ -275,11 +275,11 @@ func TestProcessBlock(t *testing.T) {
 		t.Fatal("Expected parser to be of type *parserImpl")
 	}
 
-	// Process a block
+	// Process a block - all transactions are stored regardless of subscription status
 	parserImpl.processBlock(1234)
 
 	// Verify transactions were added to storage
-	// The mock client has 2 transactions, so we should have 4 total (2 for each address)
+	// All transactions are stored regardless of subscription status
 	from1Txs := store.GetTransactions("0xfrom1")
 	to1Txs := store.GetTransactions("0xto1")
 	from2Txs := store.GetTransactions("0xfrom2")
@@ -298,7 +298,7 @@ func TestProcessBlock(t *testing.T) {
 		t.Errorf("Expected 1 transaction for to2, got %d", len(to2Txs))
 	}
 
-	// Verify transaction details
+	// Verify transaction details for from1 (outbound transaction)
 	tx := from1Txs[0]
 	if tx.Hash != "0xhash1" {
 		t.Errorf("Expected hash 0xhash1, got %s", tx.Hash)
@@ -308,6 +308,24 @@ func TestProcessBlock(t *testing.T) {
 	}
 	if tx.Value != "4096" { // 0x1000 in decimal
 		t.Errorf("Expected value 4096, got %s", tx.Value)
+	}
+	if tx.Inbound != false {
+		t.Errorf("Expected Inbound=false for from1 transaction, got %t", tx.Inbound)
+	}
+
+	// Verify transaction details for to1 (inbound transaction)
+	tx = to1Txs[0]
+	if tx.Hash != "0xhash1" {
+		t.Errorf("Expected hash 0xhash1, got %s", tx.Hash)
+	}
+	if tx.Block != 1234 {
+		t.Errorf("Expected block 1234, got %d", tx.Block)
+	}
+	if tx.Value != "4096" { // 0x1000 in decimal
+		t.Errorf("Expected value 4096, got %s", tx.Value)
+	}
+	if tx.Inbound != true {
+		t.Errorf("Expected Inbound=true for to1 transaction, got %t", tx.Inbound)
 	}
 }
 

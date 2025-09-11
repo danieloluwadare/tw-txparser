@@ -47,13 +47,17 @@ func TestMemoryStorage_AddTransaction(t *testing.T) {
 	store := NewMemoryStorage()
 	address := "0x1234567890abcdef"
 
+	// Subscribe to address first
+	store.Subscribe(address)
+
 	// Add first transaction
 	tx1 := models.Transaction{
-		Hash:  "0xhash1",
-		From:  "0xfrom1",
-		To:    address,
-		Value: "1000",
-		Block: 1,
+		Hash:    "0xhash1",
+		From:    "0xfrom1",
+		To:      address,
+		Value:   "1000",
+		Block:   1,
+		Inbound: true,
 	}
 	store.AddTransaction(address, tx1)
 
@@ -68,11 +72,12 @@ func TestMemoryStorage_AddTransaction(t *testing.T) {
 
 	// Add second transaction
 	tx2 := models.Transaction{
-		Hash:  "0xhash2",
-		From:  "0xfrom2",
-		To:    address,
-		Value: "2000",
-		Block: 2,
+		Hash:    "0xhash2",
+		From:    "0xfrom2",
+		To:      address,
+		Value:   "2000",
+		Block:   2,
+		Inbound: true,
 	}
 	store.AddTransaction(address, tx2)
 
@@ -101,9 +106,12 @@ func TestMemoryStorage_GetTransactions(t *testing.T) {
 		t.Errorf("Expected 0 transactions for new address, got %d", len(transactions))
 	}
 
+	// Subscribe to address first
+	store.Subscribe(address)
+
 	// Add some transactions
-	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1}
-	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2}
+	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true}
+	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true}
 
 	store.AddTransaction(address, tx1)
 	store.AddTransaction(address, tx2)
@@ -120,6 +128,33 @@ func TestMemoryStorage_GetTransactions(t *testing.T) {
 	}
 	if transactions[1].Hash != tx2.Hash {
 		t.Errorf("Expected second transaction hash %s, got %s", tx2.Hash, transactions[1].Hash)
+	}
+}
+
+func TestMemoryStorage_GetTransactions_SubscriptionRequired(t *testing.T) {
+	store := NewMemoryStorage()
+	address := "0x1234567890abcdef"
+
+	// Add transactions without subscribing
+	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true}
+	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true}
+
+	store.AddTransaction(address, tx1)
+	store.AddTransaction(address, tx2)
+
+	// GetTransactions should return empty for unsubscribed address
+	transactions := store.GetTransactions(address)
+	if len(transactions) != 0 {
+		t.Errorf("Expected 0 transactions for unsubscribed address, got %d", len(transactions))
+	}
+
+	// Subscribe to address
+	store.Subscribe(address)
+
+	// Now GetTransactions should return the transactions
+	transactions = store.GetTransactions(address)
+	if len(transactions) != 2 {
+		t.Errorf("Expected 2 transactions for subscribed address, got %d", len(transactions))
 	}
 }
 
@@ -151,6 +186,9 @@ func TestMemoryStorage_Concurrency(t *testing.T) {
 	store := NewMemoryStorage()
 	address := "0x1234567890abcdef"
 
+	// Subscribe to address first
+	store.Subscribe(address)
+
 	// Test concurrent access
 	done := make(chan bool, 10)
 
@@ -158,11 +196,12 @@ func TestMemoryStorage_Concurrency(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		go func(i int) {
 			tx := models.Transaction{
-				Hash:  "0xhash" + string(rune(i)),
-				From:  "0xfrom",
-				To:    address,
-				Value: "1000",
-				Block: i,
+				Hash:    "0xhash" + string(rune(i)),
+				From:    "0xfrom",
+				To:      address,
+				Value:   "1000",
+				Block:   i,
+				Inbound: true,
 			}
 			store.AddTransaction(address, tx)
 			done <- true
@@ -194,9 +233,13 @@ func TestMemoryStorage_MultipleAddresses(t *testing.T) {
 	address1 := "0x1234567890abcdef"
 	address2 := "0xfedcba0987654321"
 
+	// Subscribe to both addresses
+	store.Subscribe(address1)
+	store.Subscribe(address2)
+
 	// Add transactions for different addresses
-	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address1, Value: "1000", Block: 1}
-	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address2, Value: "2000", Block: 2}
+	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address1, Value: "1000", Block: 1, Inbound: true}
+	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address2, Value: "2000", Block: 2, Inbound: true}
 
 	store.AddTransaction(address1, tx1)
 	store.AddTransaction(address2, tx2)

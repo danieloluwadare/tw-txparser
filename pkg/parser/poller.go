@@ -111,7 +111,9 @@ func (p *parserImpl) checkForNewBlocks() error {
 	return nil
 }
 
-// processBlock fetches a block by number and stores transactions for sender and receiver addresses.
+// processBlock fetches a block by number and stores all transactions.
+// Transactions are stored for both sender and receiver addresses, regardless of subscription status.
+// This ensures no historical data is lost when addresses subscribe later.
 func (p *parserImpl) processBlock(number int) {
 	var block rpc.Block
 	if err := p.client.Call("eth_getBlockByNumber", []interface{}{formatBlockNum(number), true}, &block); err != nil {
@@ -120,20 +122,24 @@ func (p *parserImpl) processBlock(number int) {
 	}
 
 	for _, tx := range block.Transactions {
-		log.Printf("from address %v to address %v", tx.From, tx.To)
+		// Store transaction for sender address (outbound from sender's perspective)
 		p.store.AddTransaction(tx.From, models.Transaction{
-			Hash:  tx.Hash,
-			From:  tx.From,
-			To:    tx.To,
-			Value: hexToBigIntString(tx.Value),
-			Block: number,
+			Hash:    tx.Hash,
+			From:    tx.From,
+			To:      tx.To,
+			Value:   hexToBigIntString(tx.Value),
+			Block:   number,
+			Inbound: false, // Outbound transaction (from sender's perspective)
 		})
+
+		// Store transaction for receiver address (inbound from receiver's perspective)
 		p.store.AddTransaction(tx.To, models.Transaction{
-			Hash:  tx.Hash,
-			From:  tx.From,
-			To:    tx.To,
-			Value: hexToBigIntString(tx.Value),
-			Block: number,
+			Hash:    tx.Hash,
+			From:    tx.From,
+			To:      tx.To,
+			Value:   hexToBigIntString(tx.Value),
+			Block:   number,
+			Inbound: true, // Inbound transaction (to receiver's perspective)
 		})
 	}
 }

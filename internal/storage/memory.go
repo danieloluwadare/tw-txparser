@@ -41,9 +41,15 @@ func (m *MemoryStorage) AddTransaction(addr string, tx models.Transaction) {
 }
 
 // GetTransactions returns the transactions associated with an address.
+// Only returns transactions if the address is subscribed.
 func (m *MemoryStorage) GetTransactions(addr string) []models.Transaction {
 	m.RLock()
 	defer m.RUnlock()
+
+	// Only return transactions if address is subscribed
+	if !m.subs[addr] {
+		return []models.Transaction{}
+	}
 	return m.txs[addr]
 }
 

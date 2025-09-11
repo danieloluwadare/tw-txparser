@@ -1,6 +1,8 @@
 # TW Transaction Parser
 
-A high-performance Ethereum transaction parser that continuously monitors blockchain blocks, extracts transaction data, and provides a REST API for querying transactions by address. The system features intelligent backward scanning, real-time forward polling, and in-memory storage for fast data access.
+A high-performance Ethereum transaction parser that continuously monitors blockchain blocks, extracts transaction data, and provides a REST API for querying transactions by address. The system features intelligent backward scanning, real-time forward polling, and storage abstraction for data persistence.
+
+> **⚠️ PRODUCTION WARNING**: This implementation uses in-memory storage for demonstration purposes only. **Data is lost on restart and memory usage grows indefinitely**. In production environments, transactions **MUST** be stored in a database for persistence, scalability, and reliability.
 
 ## 🏗️ Architecture Overview
 
@@ -8,7 +10,7 @@ The system consists of four main components:
 
 - **Parser/Poller**: Core engine that monitors blockchain and processes transactions
 - **RPC Client**: Communicates with Ethereum nodes via JSON-RPC
-- **Storage**: In-memory data store for subscriptions and transactions
+- **Storage**: Abstracted data store for subscriptions and transactions (in-memory for demo, database for production)
 - **HTTP Server**: REST API for external access
 
 ```
@@ -23,10 +25,11 @@ The system consists of four main components:
          │                       │
          │                       ▼
          │              ┌─────────────────┐
-         └──────────────►│  Memory Storage │
+         └──────────────►│  Data Storage   │
                         │                 │
                         │  - Subscriptions│
                         │  - Transactions │
+                        │  (Memory/DB)    │
                         └─────────────────┘
 ```
 
@@ -35,7 +38,7 @@ The system consists of four main components:
 - **Real-time Block Monitoring**: Continuously polls for new blocks
 - **Historical Data Scanning**: Configurable backward scanning for missed blocks
 - **Address Subscription**: Track specific Ethereum addresses
-- **Transaction Indexing**: Stores both incoming and outgoing transactions per address
+- **Transaction Indexing**: Stores both incoming and outgoing transactions per address (with database persistence in production)
 - **REST API**: Simple HTTP endpoints for data access
 - **Graceful Shutdown**: Handles SIGINT/SIGTERM signals properly
 - **Configurable Behavior**: Environment-based configuration
@@ -206,6 +209,22 @@ type Parser interface {
     GetTransactions(address string) []models.Transaction
 }
 ```
+
+### Storage Interface
+
+The system uses a **storage abstraction** that makes it easy to switch between in-memory and database storage:
+
+```go
+type Storage interface {
+    Subscribe(address string) bool
+    AddTransaction(addr string, tx models.Transaction)
+    GetTransactions(address string) []models.Transaction
+    IsSubscribed(addr string) bool
+}
+```
+
+**Current Implementation**: `MemoryStorage` (in-memory)  
+**Production Implementation**: Database storage (PostgreSQL, MySQL, etc.)
 
 ### Poller Component
 
@@ -397,6 +416,148 @@ The system handles various error scenarios:
 ## 📄 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🔄 Data Storage Strategy & Production Considerations
+
+### Current Implementation: Store All Transactions (In-Memory)
+
+**⚠️ IMPORTANT**: This implementation uses **in-memory storage for demonstration purposes only**. In real-world production environments, transactions should be stored in a database for persistence, scalability, and reliability.
+
+The current implementation uses **Option 1: Store All Transactions** approach:
+
+- **All transactions are stored** regardless of subscription status
+- **No data loss** when addresses subscribe later
+- **Simple implementation** with predictable behavior
+- **Memory intensive** but ensures complete historical data
+- **⚠️ Data is lost on restart** - not suitable for production
+
+```go
+// Current processBlock implementation
+for _, tx := range block.Transactions {
+    // Store for sender (outbound from their perspective)
+    p.store.AddTransaction(tx.From, models.Transaction{
+        Hash:    tx.Hash,
+        From:    tx.From,
+        To:      tx.To,
+        Value:   hexToBigIntString(tx.Value),
+        Block:   number,
+        Inbound: false, // Outbound transaction
+    })
+    
+    // Store for receiver (inbound from their perspective)
+    p.store.AddTransaction(tx.To, models.Transaction{
+        Hash:    tx.Hash,
+        From:    tx.From,
+        To:      tx.To,
+        Value:   hexToBigIntString(tx.Value),
+        Block:   number,
+        Inbound: true, // Inbound transaction
+    })
+}
+```
+
+### Alternative Storage Strategies
+
+#### Option 2: Historical Re-scan on Subscription
+**Approach**: Only store transactions for subscribed addresses, but re-scan historical blocks when new addresses subscribe.
+
+**Pros**:
+- Memory efficient (only relevant data stored)
+- No data loss (historical scanning recovers missed transactions)
+- Targeted processing
+
+**Cons**:
+- More complex implementation
+- Requires tracking processed blocks
+- Slower subscription process for deeply historical addresses
+
+#### Option 3: Hybrid Approach
+**Approach**: Store recent blocks (e.g., last 1000) for all addresses, re-scan older blocks on subscription.
+
+**Pros**:
+- Balanced memory usage
+- Fast subscription for recent addresses
+- Reasonable historical coverage
+
+**Cons**:
+- Arbitrary cache size
+- Still requires historical scanning for older data
+
+#### Option 4: Subscription Queue
+**Approach**: Queue new subscriptions and process them in batches during next polling cycle.
+
+**Pros**:
+- Efficient batching
+- Predictable processing times
+
+**Cons**:
+- Delayed processing
+- Still has historical data problem
+
+### 🚨 Production Environment Requirements
+
+**CRITICAL**: This in-memory implementation is **NOT suitable for production**. Real-world deployments **MUST** use a database for data persistence.
+
+#### Essential Production Requirements:
+
+1. **Database Storage** (Required)
+2. **Data Persistence** (Required) 
+3. **Scalability** (Required)
+4. **Monitoring** (Required)
+5. **Backup & Recovery** (Required)
+
+#### Recommended Production Enhancements:
+
+#### 1. Database Integration
+```go
+// Example with PostgreSQL
+type DatabaseStorage struct {
+    db *sql.DB
+}
+
+func (d *DatabaseStorage) AddTransaction(addr string, tx models.Transaction) error {
+    query := `INSERT INTO transactions (address, hash, from_addr, to_addr, value, block, inbound) 
+              VALUES ($1, $2, $3, $4, $5, $6, $7)`
+    _, err := d.db.Exec(query, addr, tx.Hash, tx.From, tx.To, tx.Value, tx.Block, tx.Inbound)
+    return err
+}
+```
+
+#### 2. Hybrid Approach with Database
+- **Recent data** (last N blocks): Store in memory for fast access
+- **Historical data**: Store in database with proper indexing
+- **Subscription changes**: Query database for historical transactions
+
+#### 3. Performance Optimizations
+- **Database indexing** on address and block number
+- **Connection pooling** for database access
+- **Caching layer** (Redis) for frequently accessed data
+- **Batch processing** for bulk operations
+
+#### 4. Scalability Considerations
+- **Horizontal scaling** with load balancers
+- **Database sharding** by address ranges
+- **Message queues** for async processing
+- **Monitoring and alerting** for system health
+
+#### 5. Data Retention Policies
+- **Configurable retention** periods
+- **Archive old data** to cold storage
+- **Compression** for historical data
+- **Cleanup jobs** for expired subscriptions
+
+### Memory Usage Considerations
+
+**Current Implementation**:
+- Stores all transactions for all addresses
+- Memory usage grows linearly with blockchain activity
+- Suitable for development and small-scale deployments
+
+**Production Scaling**:
+- Monitor memory usage patterns
+- Implement data retention policies
+- Consider database migration when memory becomes a constraint
+- Use profiling tools to identify memory hotspots
 
 ## 🐳 Docker Features
 
