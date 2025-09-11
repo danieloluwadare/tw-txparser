@@ -7,19 +7,19 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/danieloluwadare/tw-txparser/pkg/models"
+	"github.com/danieloluwadare/tw-txparser/pkg/transaction"
 )
 
 // MockParser implements the parser.Parser interface for testing
 type MockParser struct {
 	currentBlock  int
-	transactions  map[string][]models.Transaction
+	transactions  map[string][]transaction.Transaction
 	subscriptions map[string]bool
 }
 
 func NewMockParser() *MockParser {
 	return &MockParser{
-		transactions:  make(map[string][]models.Transaction),
+		transactions:  make(map[string][]transaction.Transaction),
 		subscriptions: make(map[string]bool),
 	}
 }
@@ -36,7 +36,7 @@ func (m *MockParser) Subscribe(address string) bool {
 	return true
 }
 
-func (m *MockParser) GetTransactions(address string) []models.Transaction {
+func (m *MockParser) GetTransactions(address string) []transaction.Transaction {
 	return m.transactions[address]
 }
 
@@ -166,7 +166,7 @@ func TestServer_HandleTransactions(t *testing.T) {
 
 	// Add some test transactions
 	address := "0x1234567890abcdef"
-	transactions := []models.Transaction{
+	transactions := []transaction.Transaction{
 		{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true},
 		{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true},
 	}
@@ -216,7 +216,7 @@ func TestServer_HandleTransactions(t *testing.T) {
 			}
 
 			if tt.expectedStatus == http.StatusOK {
-				var response []models.Transaction
+				var response []transaction.Transaction
 				if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 					t.Fatalf("Failed to decode response: %v", err)
 				}
@@ -286,7 +286,7 @@ func TestServer_Integration(t *testing.T) {
 		t.Fatalf("Get transactions failed with status %d", w.Code)
 	}
 
-	var transactions []models.Transaction
+	var transactions []transaction.Transaction
 	if err := json.NewDecoder(w.Body).Decode(&transactions); err != nil {
 		t.Fatalf("Failed to decode transactions: %v", err)
 	}

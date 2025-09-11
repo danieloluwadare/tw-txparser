@@ -4,7 +4,7 @@ package parser
 import (
 	"context"
 
-	"github.com/danieloluwadare/tw-txparser/pkg/models"
+	"github.com/danieloluwadare/tw-txparser/pkg/transaction"
 )
 
 // Parser exposes read APIs and subscription management.
@@ -14,7 +14,7 @@ type Parser interface {
 	// Subscribe registers an address to track.
 	Subscribe(address string) bool
 	// GetTransactions lists transactions associated with the address.
-	GetTransactions(address string) []models.Transaction
+	GetTransactions(address string) []transaction.Transaction
 }
 
 // Poller drives continuous block polling until the context is cancelled.

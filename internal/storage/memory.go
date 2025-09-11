@@ -2,23 +2,22 @@
 package storage
 
 import (
+	"github.com/danieloluwadare/tw-txparser/pkg/transaction"
 	"sync"
-
-	"github.com/danieloluwadare/tw-txparser/pkg/models"
 )
 
 // MemoryStorage is a thread-safe in-memory implementation of Storage.
 type MemoryStorage struct {
 	sync.RWMutex
 	subs map[string]bool
-	txs  map[string][]models.Transaction
+	txs  map[string][]transaction.Transaction
 }
 
 // NewMemoryStorage creates a fresh MemoryStorage.
 func NewMemoryStorage() Storage {
 	return &MemoryStorage{
 		subs: make(map[string]bool),
-		txs:  make(map[string][]models.Transaction),
+		txs:  make(map[string][]transaction.Transaction),
 	}
 }
 
@@ -34,7 +33,7 @@ func (m *MemoryStorage) Subscribe(address string) bool {
 }
 
 // AddTransaction appends a transaction to an address's list.
-func (m *MemoryStorage) AddTransaction(addr string, tx models.Transaction) {
+func (m *MemoryStorage) AddTransaction(addr string, tx transaction.Transaction) {
 	m.Lock()
 	defer m.Unlock()
 	m.txs[addr] = append(m.txs[addr], tx)
@@ -42,13 +41,13 @@ func (m *MemoryStorage) AddTransaction(addr string, tx models.Transaction) {
 
 // GetTransactions returns the transactions associated with an address.
 // Only returns transactions if the address is subscribed.
-func (m *MemoryStorage) GetTransactions(addr string) []models.Transaction {
+func (m *MemoryStorage) GetTransactions(addr string) []transaction.Transaction {
 	m.RLock()
 	defer m.RUnlock()
 
 	// Only return transactions if address is subscribed
 	if !m.subs[addr] {
-		return []models.Transaction{}
+		return []transaction.Transaction{}
 	}
 	return m.txs[addr]
 }

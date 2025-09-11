@@ -3,7 +3,7 @@ package storage
 import (
 	"testing"
 
-	"github.com/danieloluwadare/tw-txparser/pkg/models"
+	"github.com/danieloluwadare/tw-txparser/pkg/transaction"
 )
 
 func TestMemoryStorage_Subscribe(t *testing.T) {
@@ -51,7 +51,7 @@ func TestMemoryStorage_AddTransaction(t *testing.T) {
 	store.Subscribe(address)
 
 	// Add first transaction
-	tx1 := models.Transaction{
+	tx1 := transaction.Transaction{
 		Hash:    "0xhash1",
 		From:    "0xfrom1",
 		To:      address,
@@ -71,7 +71,7 @@ func TestMemoryStorage_AddTransaction(t *testing.T) {
 	}
 
 	// Add second transaction
-	tx2 := models.Transaction{
+	tx2 := transaction.Transaction{
 		Hash:    "0xhash2",
 		From:    "0xfrom2",
 		To:      address,
@@ -110,8 +110,8 @@ func TestMemoryStorage_GetTransactions(t *testing.T) {
 	store.Subscribe(address)
 
 	// Add some transactions
-	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true}
-	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true}
+	tx1 := transaction.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true}
+	tx2 := transaction.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true}
 
 	store.AddTransaction(address, tx1)
 	store.AddTransaction(address, tx2)
@@ -136,8 +136,8 @@ func TestMemoryStorage_GetTransactions_SubscriptionRequired(t *testing.T) {
 	address := "0x1234567890abcdef"
 
 	// Add transactions without subscribing
-	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true}
-	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true}
+	tx1 := transaction.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true}
+	tx2 := transaction.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true}
 
 	store.AddTransaction(address, tx1)
 	store.AddTransaction(address, tx2)
@@ -195,7 +195,7 @@ func TestMemoryStorage_Concurrency(t *testing.T) {
 	// Start multiple goroutines that add transactions
 	for i := 0; i < 5; i++ {
 		go func(i int) {
-			tx := models.Transaction{
+			tx := transaction.Transaction{
 				Hash:    "0xhash" + string(rune(i)),
 				From:    "0xfrom",
 				To:      address,
@@ -238,8 +238,8 @@ func TestMemoryStorage_MultipleAddresses(t *testing.T) {
 	store.Subscribe(address2)
 
 	// Add transactions for different addresses
-	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address1, Value: "1000", Block: 1, Inbound: true}
-	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address2, Value: "2000", Block: 2, Inbound: true}
+	tx1 := transaction.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address1, Value: "1000", Block: 1, Inbound: true}
+	tx2 := transaction.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address2, Value: "2000", Block: 2, Inbound: true}
 
 	store.AddTransaction(address1, tx1)
 	store.AddTransaction(address2, tx2)

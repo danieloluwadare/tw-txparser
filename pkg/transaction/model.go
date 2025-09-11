@@ -1,5 +1,5 @@
-// Package models defines shared domain models.
-package models
+// Package transaction defines shared domain models.
+package transaction
 
 // Transaction is a normalized transaction persisted per address.
 type Transaction struct {

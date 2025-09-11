@@ -1,4 +1,4 @@
-# TW Transaction Parser
+# TRUST-WALLET Transaction Parser
 
 A high-performance Ethereum transaction parser that continuously monitors blockchain blocks, extracts transaction data, and provides a REST API for querying transactions by address. The system features intelligent backward scanning, real-time forward polling, and storage abstraction for data persistence.
 
@@ -194,6 +194,94 @@ Retrieve all transactions associated with an address.
   }
 ]
 ```
+
+## 🧪 API Testing with Postman
+
+### 1. Get Current Block - `GET /current`
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `http://localhost:8080/current`
+
+**Response:**
+- **Status:** `200 OK`
+- **Response Time:** `2 ms`
+- **Response Size:** `136 B`
+- **Body:**
+```json
+{
+  "block": 23338992
+}
+```
+
+### 2. Subscribe to Address - `POST /subscribe`
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `http://localhost:8080/subscribe`
+- **Content-Type:** `application/json`
+- **Body:**
+```json
+{
+  "address": "0xa69babef1ca67a37ffaf7a485dfff3382056e78c"
+}
+```
+
+**Response:**
+- **Status:** `200 OK`
+- **Response Time:** `1 ms`
+- **Response Size:** `137 B`
+- **Body:**
+```json
+{
+  "subscribed": true
+}
+```
+
+
+### 3. Get Transactions - `GET /transactions`
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `http://localhost:8080/transactions?address=0xa69babef1ca67a37ffaf7a485dfff3382056e78c`
+
+**Response:**
+- **Status:** `200 OK`
+- **Response Time:** `2 ms`
+- **Response Size:** `53.92 KB`
+- **Body:** Array of transaction objects:
+```json
+[
+  {
+    "hash": "0xe00269ed013ecc8d90beb5261b6b37587ae9dcf099c5eb30bb439be310da7d61",
+    "from": "0x9aab3f81604c683a1a0d14019fbfe15bef7aa1ee",
+    "to": "0xa69babef1ca67a37ffaf7a485dfff3382056e78c",
+    "value": "9916434",
+    "block": 23338991,
+    "inbound": true
+  },
+  {
+    "hash": "0x8022594074e7e76ca5678684180deb63cda8a5cf021f3b3d5b8384a836005a2f",
+    "from": "0x76dd32063b2899a59f6e15dbc474a160cc922751",
+    "to": "0xa69babef1ca67a37ffaf7a485dfff3382056e78c",
+    "value": "13630994",
+    "block": 23338991,
+    "inbound": true
+  }
+  // ... more transactions
+]
+```
+
+### Test Results Summary
+
+✅ **All API endpoints are working correctly:**
+- Current block tracking is functional (block 23,338,992)
+- Address subscription is successful
+- Transaction retrieval returns real Ethereum transaction data
+- Response times are excellent (< 3ms for all endpoints)
+- JSON responses are properly formatted with all required fields
+
+**Note:** The `inbound` field correctly indicates transaction direction - `true` for incoming transactions to the subscribed address.
 
 ## 🔍 Parser and Poller Deep Dive
 

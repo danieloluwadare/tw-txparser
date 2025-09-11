@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/danieloluwadare/tw-txparser/pkg/models"
 	"github.com/danieloluwadare/tw-txparser/pkg/rpc"
+	"github.com/danieloluwadare/tw-txparser/pkg/transaction"
 )
 
 // Start launches the polling goroutine if not already running.
@@ -125,7 +125,7 @@ func (p *parserImpl) processBlock(number int) {
 		log.Printf("to address: %s and from address: %s", tx.To, tx.From)
 
 		// Store transaction for sender address (outbound from sender's perspective)
-		p.store.AddTransaction(tx.From, models.Transaction{
+		p.store.AddTransaction(tx.From, transaction.Transaction{
 			Hash:    tx.Hash,
 			From:    tx.From,
 			To:      tx.To,
@@ -135,7 +135,7 @@ func (p *parserImpl) processBlock(number int) {
 		})
 
 		// Store transaction for receiver address (inbound from receiver's perspective)
-		p.store.AddTransaction(tx.To, models.Transaction{
+		p.store.AddTransaction(tx.To, transaction.Transaction{
 			Hash:    tx.Hash,
 			From:    tx.From,
 			To:      tx.To,

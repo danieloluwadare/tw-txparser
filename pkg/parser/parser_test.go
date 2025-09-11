@@ -6,20 +6,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/danieloluwadare/tw-txparser/pkg/models"
 	"github.com/danieloluwadare/tw-txparser/pkg/rpc"
+	"github.com/danieloluwadare/tw-txparser/pkg/transaction"
 )
 
 // MockStorage implements the storage.Storage interface for testing
 type MockStorage struct {
 	subscriptions map[string]bool
-	transactions  map[string][]models.Transaction
+	transactions  map[string][]transaction.Transaction
 }
 
 func NewMockStorage() *MockStorage {
 	return &MockStorage{
 		subscriptions: make(map[string]bool),
-		transactions:  make(map[string][]models.Transaction),
+		transactions:  make(map[string][]transaction.Transaction),
 	}
 }
 
@@ -31,11 +31,11 @@ func (m *MockStorage) Subscribe(address string) bool {
 	return true
 }
 
-func (m *MockStorage) AddTransaction(addr string, tx models.Transaction) {
+func (m *MockStorage) AddTransaction(addr string, tx transaction.Transaction) {
 	m.transactions[addr] = append(m.transactions[addr], tx)
 }
 
-func (m *MockStorage) GetTransactions(address string) []models.Transaction {
+func (m *MockStorage) GetTransactions(address string) []transaction.Transaction {
 	return m.transactions[address]
 }
 
@@ -159,8 +159,8 @@ func TestParser_GetTransactions(t *testing.T) {
 	}
 
 	// Add some transactions directly to storage
-	tx1 := models.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true}
-	tx2 := models.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true}
+	tx1 := transaction.Transaction{Hash: "0xhash1", From: "0xfrom1", To: address, Value: "1000", Block: 1, Inbound: true}
+	tx2 := transaction.Transaction{Hash: "0xhash2", From: "0xfrom2", To: address, Value: "2000", Block: 2, Inbound: true}
 
 	store.AddTransaction(address, tx1)
 	store.AddTransaction(address, tx2)

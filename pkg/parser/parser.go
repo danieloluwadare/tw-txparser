@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/danieloluwadare/tw-txparser/internal/storage"
-	"github.com/danieloluwadare/tw-txparser/pkg/models"
 	"github.com/danieloluwadare/tw-txparser/pkg/rpc"
+	"github.com/danieloluwadare/tw-txparser/pkg/transaction"
 )
 
 // parserImpl implements Parser and Poller using an RPC client and Storage.
@@ -63,6 +63,6 @@ func (p *parserImpl) Subscribe(address string) bool {
 }
 
 // GetTransactions returns transactions from the underlying storage.
-func (p *parserImpl) GetTransactions(address string) []models.Transaction {
+func (p *parserImpl) GetTransactions(address string) []transaction.Transaction {
 	return p.store.GetTransactions(address)
 }
