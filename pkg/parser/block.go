@@ -36,15 +36,10 @@ func decodeHex(hexStr string) (int, error) {
 }
 
 // hexToBigIntString converts hex string "0x..." to decimal string.
-// Values larger than 256 bits are truncated to the least-significant 256 bits.
 func hexToBigIntString(h string) string {
 	hi := strings.TrimPrefix(h, "0x")
 	if hi == "" {
 		return "0"
-	}
-	// Cap to 256 bits (64 hex chars) by taking the least-significant digits
-	if len(hi) > 64 {
-		hi = hi[len(hi)-64:]
 	}
 	b := new(big.Int)
 	_, ok := b.SetString(hi, 16)

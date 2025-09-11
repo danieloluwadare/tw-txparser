@@ -109,12 +109,14 @@ The parser supports the following environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `ETHEREUM_RPC_URL` | `https://ethereum-rpc.publicnode.com` | Ethereum RPC endpoint URL |
 | `BACKWARD_SCAN_ENABLED` | `true` | Enable/disable historical block scanning |
 | `BACKWARD_SCAN_DEPTH` | `10000` | Number of blocks to scan backward from current |
 
 ### Example Configuration
 
 ```bash
+export ETHEREUM_RPC_URL="https://mainnet.infura.io/v3/YOUR_PROJECT_ID"
 export BACKWARD_SCAN_ENABLED=true
 export BACKWARD_SCAN_DEPTH=5000
 ./txparser
@@ -483,16 +485,6 @@ for _, tx := range block.Transactions {
 - Arbitrary cache size
 - Still requires historical scanning for older data
 
-#### Option 4: Subscription Queue
-**Approach**: Queue new subscriptions and process them in batches during next polling cycle.
-
-**Pros**:
-- Efficient batching
-- Predictable processing times
-
-**Cons**:
-- Delayed processing
-- Still has historical data problem
 
 ### 🚨 Production Environment Requirements
 

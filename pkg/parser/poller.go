@@ -122,6 +122,8 @@ func (p *parserImpl) processBlock(number int) {
 	}
 
 	for _, tx := range block.Transactions {
+		log.Printf("to address: %s and from address: %s", tx.To, tx.From)
+
 		// Store transaction for sender address (outbound from sender's perspective)
 		p.store.AddTransaction(tx.From, models.Transaction{
 			Hash:    tx.Hash,

@@ -19,8 +19,13 @@ import (
 // main is the entry point. It starts the block poller and the HTTP server,
 // and performs a graceful shutdown on SIGINT/SIGTERM.
 func main() {
-	// RPC client
-	client := rpc.NewClient("https://ethereum-rpc.publicnode.com")
+	// RPC client - get URL from environment variable with fallback
+	rpcURL := os.Getenv("ETHEREUM_RPC_URL")
+	if rpcURL == "" {
+		rpcURL = "https://ethereum-rpc.publicnode.com"
+	}
+	log.Printf("Using Ethereum RPC URL: %s", rpcURL)
+	client := rpc.NewClient(rpcURL)
 
 	// In-memory storage
 	store := storage.NewMemoryStorage()

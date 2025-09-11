@@ -156,7 +156,7 @@ func TestHexToBigIntString(t *testing.T) {
 		{
 			name:     "very large hex value",
 			hexStr:   "0x1ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-			expected: "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+			expected: "26815615859885194199148049996411692254958731641184786755447122887443528060147093953603748596333806855380063716372972101707507765623893139892867298012168191",
 		},
 		{
 			name:     "invalid hex",
