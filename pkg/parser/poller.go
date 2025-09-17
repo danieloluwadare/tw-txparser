@@ -3,6 +3,7 @@ package parser
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
@@ -36,14 +37,16 @@ func (p *parserImpl) pollLoop(ctx context.Context) {
 
 	// --- Step 1: Initialize current block ---
 	var blockHex string
-	if err := p.client.Call("eth_blockNumber", []interface{}{}, &blockHex); err != nil {
+	if err := p.client.Call(ctx, "eth_blockNumber", []interface{}{}, &blockHex); err != nil {
 		log.Printf("[poll] failed to init current block: %v", err)
 		return
 	}
 	latestBlock := hexToInt(blockHex)
 	log.Printf("[poll] initialized at block %d", latestBlock)
 	// --- Step 2: Process the latest block immediately ---
-	p.processBlock(latestBlock)
+	if err := p.processBlock(ctx, latestBlock); err != nil {
+		log.Printf("[poll] failed to process initial block %d: %v", latestBlock, err)
+	}
 	p.block = latestBlock
 
 	// --- Step 3: Optionally start bounded backward scan in a goroutine ---
@@ -68,7 +71,9 @@ func (p *parserImpl) scanBackward(ctx context.Context, from int, stopAt int) {
 			log.Println("[backward] stopping backward scan")
 			return
 		default:
-			p.processBlock(i)
+			if err := p.processBlock(ctx, i); err != nil {
+				log.Printf("[backward] failed to process block %d: %v", i, err)
+			}
 			if i%1000 == 0 {
 				log.Printf("[backward] scanned down to block %d", i)
 			}
@@ -86,7 +91,7 @@ func (p *parserImpl) scanForward(ctx context.Context, ticker *time.Ticker) {
 			log.Println("[forward] stopping forward scan")
 			return
 		case <-ticker.C:
-			if err := p.checkForNewBlocks(); err != nil {
+			if err := p.checkForNewBlocks(ctx); err != nil {
 				log.Printf("[forward] error checking new blocks: %v", err)
 			}
 		}
@@ -94,17 +99,20 @@ func (p *parserImpl) scanForward(ctx context.Context, ticker *time.Ticker) {
 }
 
 // checkForNewBlocks queries the latest block number and processes newly discovered blocks.
-func (p *parserImpl) checkForNewBlocks() error {
+func (p *parserImpl) checkForNewBlocks(ctx context.Context) error {
 	var blockHex string
-	if err := p.client.Call("eth_blockNumber", []interface{}{}, &blockHex); err != nil {
-		return err
+	if err := p.client.Call(ctx, "eth_blockNumber", []interface{}{}, &blockHex); err != nil {
+		return fmt.Errorf("failed to get latest block number: %w", err)
 	}
 	latestBlock := hexToInt(blockHex)
 
 	if latestBlock > p.block {
 		for i := p.block + 1; i <= latestBlock; i++ {
-			p.processBlock(i)
-			log.Printf("[forward] processed block %d", i)
+			if err := p.processBlock(ctx, i); err != nil {
+				log.Printf("[forward] failed to process block %d: %v", i, err)
+			} else {
+				log.Printf("[forward] processed block %d", i)
+			}
 		}
 		p.block = latestBlock
 	}
@@ -114,11 +122,10 @@ func (p *parserImpl) checkForNewBlocks() error {
 // processBlock fetches a block by number and stores all transactions.
 // Transactions are stored for both sender and receiver addresses, regardless of subscription status.
 // This ensures no historical data is lost when addresses subscribe later.
-func (p *parserImpl) processBlock(number int) {
+func (p *parserImpl) processBlock(ctx context.Context, number int) error {
 	var block rpc.Block
-	if err := p.client.Call("eth_getBlockByNumber", []interface{}{formatBlockNum(number), true}, &block); err != nil {
-		log.Println("error fetching block:", err)
-		return
+	if err := p.client.Call(ctx, "eth_getBlockByNumber", []interface{}{formatBlockNum(number), true}, &block); err != nil {
+		return fmt.Errorf("failed to fetch block %d: %w", number, err)
 	}
 
 	for _, tx := range block.Transactions {
@@ -144,6 +151,7 @@ func (p *parserImpl) processBlock(number int) {
 			Inbound: true, // Inbound transaction (to receiver's perspective)
 		})
 	}
+	return nil
 }
 
 // formatBlockNum converts a decimal block number into a 0x-prefixed hex string.

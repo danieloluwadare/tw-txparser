@@ -74,7 +74,7 @@ func NewMockRPCClient() *MockRPCClient {
 	}
 }
 
-func (m *MockRPCClient) Call(method string, params []interface{}, result interface{}) error {
+func (m *MockRPCClient) Call(ctx context.Context, method string, params []interface{}, result interface{}) error {
 	if m.callError != nil {
 		return m.callError
 	}
@@ -276,7 +276,10 @@ func TestProcessBlock(t *testing.T) {
 	}
 
 	// Process a block - all transactions are stored regardless of subscription status
-	parserImpl.processBlock(1234)
+	err := parserImpl.processBlock(context.Background(), 1234)
+	if err != nil {
+		t.Fatalf("processBlock failed: %v", err)
+	}
 
 	// Verify transactions were added to storage
 	// All transactions are stored regardless of subscription status
@@ -341,7 +344,10 @@ func TestProcessBlock_Error(t *testing.T) {
 	}
 
 	// Process a block with error
-	parserImpl.processBlock(1234)
+	err := parserImpl.processBlock(context.Background(), 1234)
+	if err == nil {
+		t.Error("Expected processBlock to return error")
+	}
 
 	// Verify no transactions were added
 	from1Txs := store.GetTransactions("0xfrom1")
