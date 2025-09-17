@@ -20,4 +20,5 @@ type Parser interface {
 // Poller drives continuous block polling until the context is cancelled.
 type Poller interface {
 	Start(ctx context.Context)
+	Stop() // Gracefully stops all goroutines and waits for them to complete
 }

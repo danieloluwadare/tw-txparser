@@ -81,14 +81,15 @@ func (m *MockRPCClient) Call(ctx context.Context, method string, params []interf
 
 	switch method {
 	case "eth_blockNumber":
-		// Return different block numbers to avoid infinite processing
 		m.callCount++
-		// Stop after 3 calls to prevent infinite loops in tests
-		if m.callCount > 20 {
-			return fmt.Errorf("too many calls")
+		// Return increasing block numbers for first few calls, then stable
+		if m.callCount <= 3 {
+			blockNum := 0x1234 + m.callCount
+			*result.(*string) = fmt.Sprintf("0x%x", blockNum)
+		} else {
+			// Return stable block number to prevent infinite processing
+			*result.(*string) = "0x1237"
 		}
-		blockNum := 0x1234 + m.callCount
-		*result.(*string) = fmt.Sprintf("0x%x", blockNum)
 	case "eth_getBlockByNumber":
 		*result.(*rpc.Block) = m.blockResponse
 	}
@@ -237,6 +238,47 @@ func TestParser_Start_MultipleCalls(t *testing.T) {
 
 	if !started {
 		t.Error("Expected polling to be started")
+	}
+}
+
+func TestParser_Stop(t *testing.T) {
+	client := NewMockRPCClient()
+	store := NewMockStorage()
+	parser := NewParserWithInterval(client, store, 50*time.Millisecond, Options{BackwardScanEnabled: false, BackwardScanDepth: 10000})
+
+	parserImpl, ok := parser.(*parserImpl)
+	if !ok {
+		t.Fatal("Expected parser to be of type *parserImpl")
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Start the parser
+	parserImpl.Start(ctx)
+
+	// Give it a moment to start
+	time.Sleep(10 * time.Millisecond)
+
+	// Cancel the context to signal shutdown
+	cancel()
+
+	// Stop the parser - this should block until all goroutines complete
+	start := time.Now()
+	parserImpl.Stop()
+	duration := time.Since(start)
+
+	// Verify that polling was stopped
+	parserImpl.pollingStartedMu.Lock()
+	started := parserImpl.pollingStarted
+	parserImpl.pollingStartedMu.Unlock()
+
+	if started {
+		t.Error("Expected polling to be stopped")
+	}
+
+	// The stop should have completed quickly (not hanging)
+	if duration > 100*time.Millisecond {
+		t.Errorf("Stop took too long: %v", duration)
 	}
 }
 

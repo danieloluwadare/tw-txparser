@@ -21,16 +21,25 @@ func (p *parserImpl) Start(ctx context.Context) {
 	}
 	p.pollingStarted = true
 
+	p.wg.Add(1)
 	go p.pollLoop(ctx)
+}
+
+// Stop gracefully stops all goroutines and waits for them to complete.
+func (p *parserImpl) Stop() {
+	log.Println("[parser] stopping parser and waiting for goroutines to complete...")
+	p.wg.Wait()
+	log.Println("[parser] all goroutines stopped")
 }
 
 // pollLoop initializes the current block, kicks off scans, and runs forward scanning until cancelled.
 func (p *parserImpl) pollLoop(ctx context.Context) {
-	// Ensure pollingStarted flag is reset when we exit
+	// Ensure pollingStarted flag is reset and WaitGroup is decremented when we exit
 	defer func() {
 		p.pollingStartedMu.Lock()
 		p.pollingStarted = false
 		p.pollingStartedMu.Unlock()
+		p.wg.Done()
 	}()
 	ticker := time.NewTicker(p.pollInterval)
 	defer ticker.Stop()
@@ -55,6 +64,7 @@ func (p *parserImpl) pollLoop(ctx context.Context) {
 		if stopAt < 1 {
 			stopAt = 1
 		}
+		p.wg.Add(1)
 		go p.scanBackward(ctx, latestBlock-1, stopAt)
 	}
 
@@ -64,6 +74,7 @@ func (p *parserImpl) pollLoop(ctx context.Context) {
 
 // scanBackward iterates from `from` down to `stopAt` (inclusive), processing each block.
 func (p *parserImpl) scanBackward(ctx context.Context, from int, stopAt int) {
+	defer p.wg.Done()
 	log.Printf("[backward] starting scan from %d -> %d", from, stopAt)
 	for i := from; i >= stopAt; i-- {
 		select {
