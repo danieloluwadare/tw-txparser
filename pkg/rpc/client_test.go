@@ -255,3 +255,66 @@ func TestRPCError(t *testing.T) {
 		t.Errorf("Message mismatch: got %s, expected %s", unmarshaledError.Message, rpcError.Message)
 	}
 }
+
+func TestClient_GetBlockNumber(t *testing.T) {
+	// Create a mock server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		response := `{"jsonrpc":"2.0","id":1,"result":"0x1234"}`
+		w.Write([]byte(response))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+
+	// Test GetBlockNumber
+	blockNumber, err := client.GetBlockNumber(context.Background())
+	if err != nil {
+		t.Fatalf("GetBlockNumber failed: %v", err)
+	}
+	if blockNumber != "0x1234" {
+		t.Errorf("Expected block number 0x1234, got %s", blockNumber)
+	}
+}
+
+func TestClient_GetBlockByNumber(t *testing.T) {
+	// Create a mock server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		response := `{"jsonrpc":"2.0","id":1,"result":{"number":"0x1234","hash":"0xabcd","transactions":[]}}`
+		w.Write([]byte(response))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+
+	// Test GetBlockByNumber with hex string
+	block, err := client.GetBlockByNumber(context.Background(), "0x1234", true)
+	if err != nil {
+		t.Fatalf("GetBlockByNumber failed: %v", err)
+	}
+	if block.Number != "0x1234" {
+		t.Errorf("Expected block number 0x1234, got %s", block.Number)
+	}
+}
+
+func TestClient_GetBlockByNumberInt(t *testing.T) {
+	// Create a mock server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		response := `{"jsonrpc":"2.0","id":1,"result":{"number":"0x1234","hash":"0xabcd","transactions":[]}}`
+		w.Write([]byte(response))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+
+	// Test GetBlockByNumberInt with integer
+	block, err := client.GetBlockByNumberInt(context.Background(), 4660, true)
+	if err != nil {
+		t.Fatalf("GetBlockByNumberInt failed: %v", err)
+	}
+	if block.Number != "0x1234" {
+		t.Errorf("Expected block number 0x1234, got %s", block.Number)
+	}
+}

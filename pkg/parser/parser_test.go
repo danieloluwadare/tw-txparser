@@ -96,6 +96,34 @@ func (m *MockRPCClient) Call(ctx context.Context, method string, params []interf
 	return nil
 }
 
+func (m *MockRPCClient) GetBlockNumber(ctx context.Context) (string, error) {
+	if m.callError != nil {
+		return "", m.callError
+	}
+	m.callCount++
+	// Return increasing block numbers for first few calls, then stable
+	if m.callCount <= 3 {
+		blockNum := 0x1234 + m.callCount
+		return fmt.Sprintf("0x%x", blockNum), nil
+	}
+	// Return stable block number to prevent infinite processing
+	return "0x1237", nil
+}
+
+func (m *MockRPCClient) GetBlockByNumber(ctx context.Context, blockNumber string, includeTransactions bool) (*rpc.Block, error) {
+	if m.callError != nil {
+		return nil, m.callError
+	}
+	return &m.blockResponse, nil
+}
+
+func (m *MockRPCClient) GetBlockByNumberInt(ctx context.Context, blockNumber int, includeTransactions bool) (*rpc.Block, error) {
+	if m.callError != nil {
+		return nil, m.callError
+	}
+	return &m.blockResponse, nil
+}
+
 func TestNewParserWithInterval(t *testing.T) {
 	client := NewMockRPCClient()
 	store := NewMockStorage()

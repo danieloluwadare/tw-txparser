@@ -62,3 +62,32 @@ func (c *Client) Call(ctx context.Context, method string, params []interface{}, 
 	}
 	return nil
 }
+
+// GetBlockNumber returns the latest block number as a hex string.
+func (c *Client) GetBlockNumber(ctx context.Context) (string, error) {
+	var blockHex string
+	err := c.Call(ctx, "eth_blockNumber", []interface{}{}, &blockHex)
+	if err != nil {
+		return "", fmt.Errorf("failed to get block number: %w", err)
+	}
+	return blockHex, nil
+}
+
+// GetBlockByNumber returns block details for the given block number.
+// blockNumber should be a hex string (e.g., "0x1234" or "latest").
+// includeTransactions determines whether to include full transaction objects.
+func (c *Client) GetBlockByNumber(ctx context.Context, blockNumber string, includeTransactions bool) (*Block, error) {
+	var block Block
+	err := c.Call(ctx, "eth_getBlockByNumber", []interface{}{blockNumber, includeTransactions}, &block)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get block %s: %w", blockNumber, err)
+	}
+	return &block, nil
+}
+
+// GetBlockByNumberInt returns block details for the given block number as an integer.
+// This is a convenience method that converts the integer to hex format.
+func (c *Client) GetBlockByNumberInt(ctx context.Context, blockNumber int, includeTransactions bool) (*Block, error) {
+	hexBlockNumber := fmt.Sprintf("0x%x", blockNumber)
+	return c.GetBlockByNumber(ctx, hexBlockNumber, includeTransactions)
+}

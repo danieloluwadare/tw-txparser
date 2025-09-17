@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/danieloluwadare/tw-txparser/pkg/rpc"
 	"github.com/danieloluwadare/tw-txparser/pkg/transaction"
 )
 
@@ -45,8 +44,8 @@ func (p *parserImpl) pollLoop(ctx context.Context) {
 	defer ticker.Stop()
 
 	// --- Step 1: Initialize current block ---
-	var blockHex string
-	if err := p.client.Call(ctx, "eth_blockNumber", []interface{}{}, &blockHex); err != nil {
+	blockHex, err := p.client.GetBlockNumber(ctx)
+	if err != nil {
 		log.Printf("[poll] failed to init current block: %v", err)
 		return
 	}
@@ -111,8 +110,8 @@ func (p *parserImpl) scanForward(ctx context.Context, ticker *time.Ticker) {
 
 // checkForNewBlocks queries the latest block number and processes newly discovered blocks.
 func (p *parserImpl) checkForNewBlocks(ctx context.Context) error {
-	var blockHex string
-	if err := p.client.Call(ctx, "eth_blockNumber", []interface{}{}, &blockHex); err != nil {
+	blockHex, err := p.client.GetBlockNumber(ctx)
+	if err != nil {
 		return fmt.Errorf("failed to get latest block number: %w", err)
 	}
 	latestBlock := hexToInt(blockHex)
@@ -134,8 +133,8 @@ func (p *parserImpl) checkForNewBlocks(ctx context.Context) error {
 // Transactions are stored for both sender and receiver addresses, regardless of subscription status.
 // This ensures no historical data is lost when addresses subscribe later.
 func (p *parserImpl) processBlock(ctx context.Context, number int) error {
-	var block rpc.Block
-	if err := p.client.Call(ctx, "eth_getBlockByNumber", []interface{}{formatBlockNum(number), true}, &block); err != nil {
+	block, err := p.client.GetBlockByNumberInt(ctx, number, true)
+	if err != nil {
 		return fmt.Errorf("failed to fetch block %d: %w", number, err)
 	}
 

@@ -9,6 +9,10 @@ import (
 // RPCClient abstracts a JSON-RPC caller.
 type RPCClient interface {
 	Call(ctx context.Context, method string, params []interface{}, result interface{}) error
+	// Helper methods for common RPC calls
+	GetBlockNumber(ctx context.Context) (string, error)
+	GetBlockByNumber(ctx context.Context, blockNumber string, includeTransactions bool) (*Block, error)
+	GetBlockByNumberInt(ctx context.Context, blockNumber int, includeTransactions bool) (*Block, error)
 }
 
 // JSONRPCRequest is the wire format for requests.
