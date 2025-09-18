@@ -39,7 +39,7 @@ func NewMockRPCClient() *MockRPCClient {
 	}
 }
 
-func (m *MockRPCClient) Call(method string, params []interface{}, result interface{}) error {
+func (m *MockRPCClient) Call(ctx context.Context, method string, params []interface{}, result interface{}) error {
 	if m.callError != nil {
 		return m.callError
 	}
@@ -51,6 +51,19 @@ func (m *MockRPCClient) Call(method string, params []interface{}, result interfa
 		*result.(*rpc.Block) = m.blockResponse
 	}
 	return nil
+}
+
+// Implement the new helper methods
+func (m *MockRPCClient) GetBlockNumber(ctx context.Context) (string, error) {
+	return m.blockNumberResponse, nil
+}
+
+func (m *MockRPCClient) GetBlockByNumber(ctx context.Context, blockNumber string, includeTransactions bool) (*rpc.Block, error) {
+	return &m.blockResponse, nil
+}
+
+func (m *MockRPCClient) GetBlockByNumberInt(ctx context.Context, blockNumber int, includeTransactions bool) (*rpc.Block, error) {
+	return &m.blockResponse, nil
 }
 
 func TestIntegration_SubscribeAndGetTransactions(t *testing.T) {
