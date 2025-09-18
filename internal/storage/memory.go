@@ -2,13 +2,14 @@
 package storage
 
 import (
-	"github.com/danieloluwadare/tw-txparser/pkg/transaction"
 	"sync"
+
+	"github.com/danieloluwadare/tw-txparser/pkg/transaction"
 )
 
 // MemoryStorage is a thread-safe in-memory implementation of Storage.
 type MemoryStorage struct {
-	sync.RWMutex
+	mu   sync.Mutex
 	subs map[string]bool
 	txs  map[string][]transaction.Transaction
 }
@@ -23,8 +24,8 @@ func NewMemoryStorage() Storage {
 
 // Subscribe registers an address. Returns false if already subscribed.
 func (m *MemoryStorage) Subscribe(address string) bool {
-	m.Lock()
-	defer m.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.subs[address] {
 		return false
 	}
@@ -34,16 +35,16 @@ func (m *MemoryStorage) Subscribe(address string) bool {
 
 // AddTransaction appends a transaction to an address's list.
 func (m *MemoryStorage) AddTransaction(addr string, tx transaction.Transaction) {
-	m.Lock()
-	defer m.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.txs[addr] = append(m.txs[addr], tx)
 }
 
 // GetTransactions returns the transactions associated with an address.
 // Only returns transactions if the address is subscribed.
 func (m *MemoryStorage) GetTransactions(addr string) []transaction.Transaction {
-	m.RLock()
-	defer m.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	// Only return transactions if address is subscribed
 	if !m.subs[addr] {
@@ -54,7 +55,7 @@ func (m *MemoryStorage) GetTransactions(addr string) []transaction.Transaction {
 
 // IsSubscribed checks if an address is registered.
 func (m *MemoryStorage) IsSubscribed(addr string) bool {
-	m.RLock()
-	defer m.RUnlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	return m.subs[addr]
 }
