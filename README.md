@@ -488,6 +488,70 @@ The system handles various error scenarios:
 - **Network Issues**: Retries on next polling cycle
 - **Storage Errors**: Logs but doesn't crash the application
 
+### 🔄 Retry Logic Recommendations
+
+**Note**: The current implementation does not include retry logic for network failures. For production environments, consider implementing the following retry strategies:
+
+#### 1. Exponential Backoff for RPC Calls
+```go
+// Example retry implementation
+func (c *Client) CallWithRetry(ctx context.Context, method string, params []interface{}, result interface{}) error {
+    maxRetries := 3
+    baseDelay := 1 * time.Second
+    
+    for attempt := 0; attempt < maxRetries; attempt++ {
+        err := c.Call(ctx, method, params, result)
+        if err == nil {
+            return nil
+        }
+        
+        // Don't retry on context cancellation
+        if ctx.Err() != nil {
+            return err
+        }
+        
+        // Exponential backoff
+        delay := time.Duration(attempt+1) * baseDelay
+        time.Sleep(delay)
+    }
+    
+    return fmt.Errorf("RPC call failed after %d attempts: %w", maxRetries, err)
+}
+```
+
+#### 2. Circuit Breaker Pattern
+Implement a circuit breaker to prevent cascading failures when the RPC endpoint is down:
+
+```go
+type CircuitBreaker struct {
+    maxFailures int
+    timeout     time.Duration
+    // ... implementation details
+}
+```
+
+#### 3. Health Checks and Fallback
+- **Health monitoring**: Regular health checks on RPC endpoints
+- **Fallback endpoints**: Multiple RPC providers for redundancy
+- **Graceful degradation**: Continue with cached data when RPC is unavailable
+
+#### 4. Production Retry Configuration
+```go
+type RetryConfig struct {
+    MaxRetries    int           `json:"max_retries"`
+    BaseDelay     time.Duration `json:"base_delay"`
+    MaxDelay      time.Duration `json:"max_delay"`
+    Jitter        bool          `json:"jitter"`
+    RetryableErrors []string    `json:"retryable_errors"`
+}
+```
+
+**Benefits of implementing retry logic:**
+- **Improved reliability**: Handles temporary network issues
+- **Better user experience**: Reduces failed requests
+- **Production readiness**: Essential for production deployments
+- **Cost efficiency**: Reduces unnecessary error handling overhead
+
 ## 📊 Performance Considerations
 
 - **Memory Usage**: Grows with number of tracked addresses and transactions

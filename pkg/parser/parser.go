@@ -18,6 +18,8 @@ type parserImpl struct {
 	pollingStarted   bool
 	pollingStartedMu sync.Mutex
 	pollInterval     time.Duration
+	// goroutine management
+	wg sync.WaitGroup
 	// configuration
 	backwardScanEnabled bool
 	backwardScanDepth   int

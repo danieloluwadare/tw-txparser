@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -79,7 +80,7 @@ func TestClient_Call(t *testing.T) {
 
 	// Test eth_blockNumber call
 	var blockNumber string
-	err := client.Call("eth_blockNumber", []interface{}{}, &blockNumber)
+	err := client.Call(context.Background(), "eth_blockNumber", []interface{}{}, &blockNumber)
 	if err != nil {
 		t.Fatalf("Call failed: %v", err)
 	}
@@ -89,7 +90,7 @@ func TestClient_Call(t *testing.T) {
 
 	// Test eth_getBlockByNumber call
 	var block Block
-	err = client.Call("eth_getBlockByNumber", []interface{}{"0x1234", true}, &block)
+	err = client.Call(context.Background(), "eth_getBlockByNumber", []interface{}{"0x1234", true}, &block)
 	if err != nil {
 		t.Fatalf("Call failed: %v", err)
 	}
@@ -123,12 +124,13 @@ func TestClient_Call_Error(t *testing.T) {
 	client := NewClient(server.URL)
 
 	var result string
-	err := client.Call("invalid_method", []interface{}{}, &result)
+	err := client.Call(context.Background(), "invalid_method", []interface{}{}, &result)
 	if err == nil {
 		t.Error("Expected error but got none")
 	}
-	if err.Error() != "rpc error: Method not found" {
-		t.Errorf("Expected 'rpc error: Method not found', got %s", err.Error())
+	expectedError := "RPC error for method invalid_method (code -32601): Method not found"
+	if err.Error() != expectedError {
+		t.Errorf("Expected '%s', got %s", expectedError, err.Error())
 	}
 }
 
@@ -137,7 +139,7 @@ func TestClient_Call_NetworkError(t *testing.T) {
 	client := NewClient("http://invalid-url-that-does-not-exist")
 
 	var result string
-	err := client.Call("eth_blockNumber", []interface{}{}, &result)
+	err := client.Call(context.Background(), "eth_blockNumber", []interface{}{}, &result)
 	if err == nil {
 		t.Error("Expected network error but got none")
 	}
@@ -154,7 +156,7 @@ func TestClient_Call_InvalidJSON(t *testing.T) {
 	client := NewClient(server.URL)
 
 	var result string
-	err := client.Call("eth_blockNumber", []interface{}{}, &result)
+	err := client.Call(context.Background(), "eth_blockNumber", []interface{}{}, &result)
 	if err == nil {
 		t.Error("Expected JSON decode error but got none")
 	}
@@ -251,5 +253,68 @@ func TestRPCError(t *testing.T) {
 	}
 	if unmarshaledError.Message != rpcError.Message {
 		t.Errorf("Message mismatch: got %s, expected %s", unmarshaledError.Message, rpcError.Message)
+	}
+}
+
+func TestClient_GetBlockNumber(t *testing.T) {
+	// Create a mock server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		response := `{"jsonrpc":"2.0","id":1,"result":"0x1234"}`
+		w.Write([]byte(response))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+
+	// Test GetBlockNumber
+	blockNumber, err := client.GetBlockNumber(context.Background())
+	if err != nil {
+		t.Fatalf("GetBlockNumber failed: %v", err)
+	}
+	if blockNumber != "0x1234" {
+		t.Errorf("Expected block number 0x1234, got %s", blockNumber)
+	}
+}
+
+func TestClient_GetBlockByNumber(t *testing.T) {
+	// Create a mock server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		response := `{"jsonrpc":"2.0","id":1,"result":{"number":"0x1234","hash":"0xabcd","transactions":[]}}`
+		w.Write([]byte(response))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+
+	// Test GetBlockByNumber with hex string
+	block, err := client.GetBlockByNumber(context.Background(), "0x1234", true)
+	if err != nil {
+		t.Fatalf("GetBlockByNumber failed: %v", err)
+	}
+	if block.Number != "0x1234" {
+		t.Errorf("Expected block number 0x1234, got %s", block.Number)
+	}
+}
+
+func TestClient_GetBlockByNumberInt(t *testing.T) {
+	// Create a mock server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		response := `{"jsonrpc":"2.0","id":1,"result":{"number":"0x1234","hash":"0xabcd","transactions":[]}}`
+		w.Write([]byte(response))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+
+	// Test GetBlockByNumberInt with integer
+	block, err := client.GetBlockByNumberInt(context.Background(), 4660, true)
+	if err != nil {
+		t.Fatalf("GetBlockByNumberInt failed: %v", err)
+	}
+	if block.Number != "0x1234" {
+		t.Errorf("Expected block number 0x1234, got %s", block.Number)
 	}
 }

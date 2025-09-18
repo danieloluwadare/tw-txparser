@@ -78,5 +78,10 @@ func main() {
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	<-sigCh
 	log.Println("Shutting down...")
+
+	// Cancel context to signal all goroutines to stop
 	cancel()
+
+	// Wait for all parser goroutines to complete gracefully
+	poller.Stop()
 }
